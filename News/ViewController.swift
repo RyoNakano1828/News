@@ -7,7 +7,7 @@
 
 import UIKit
 
-class ViewController: UIViewController, UISearchBarDelegate {
+class ViewController: UIViewController, UISearchBarDelegate, UITableViewDataSource {
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -17,6 +17,9 @@ class ViewController: UIViewController, UISearchBarDelegate {
         searchBar.delegate = self
         //入力のヒントになるう、プレースホルダーを設定
         searchBar.placeholder = "知りたいニュースを検索"
+        
+        //TableViewのdataSource設定
+        tableView.dataSource = self
     }
     //Jsonのarticle内のデータ構造
     struct ArticleJson: Codable {
@@ -33,6 +36,9 @@ class ViewController: UIViewController, UISearchBarDelegate {
 
     @IBOutlet weak var searchBar: UISearchBar!
     @IBOutlet weak var tableView: UITableView!
+    
+    //ニュースのリスト(タプル型：追加削除ができない)
+    var newsList: [(title: String, url: URL, urlToImage: URL)] = []
     
     //検索ボタンをクリックした時
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
@@ -73,7 +79,24 @@ class ViewController: UIViewController, UISearchBarDelegate {
                 //受け取ったJsonデータをパース（解析）して格納
                 let json = try decoder.decode(ResultJson.self, from: data!)
                 
-                print(json)
+                //ニュース情報が取得できているか
+                if let articles = json.articles {
+                    //ニュース配列を初期化
+                    self.newsList.removeAll()
+                    //取得しているニュースの数だけ処理
+                    for article in articles {
+                        //ニュースのタイトル、詳細、掲載URL、画像URLをアンラップ
+                        if let title = article.title, let url = article.url, let urlToImage = article.urlToImage {
+                            //一つのニュースをタプルでまとめて管理
+                            let news = (title,url,urlToImage)
+                            //ニュース配列へ追加
+                            self.newsList.append(news)
+                        }
+                    }
+                    //TableViewを更新する
+                    self.tableView.reloadData()
+                }
+                //print(json)
             } catch {
                 //エラー処理
                 print("error occured")
@@ -82,6 +105,26 @@ class ViewController: UIViewController, UISearchBarDelegate {
         })
         //ダウンロード開始
         task.resume()
+    }
+    
+    //Cellの総数を返すdatasourceメソッド
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return newsList.count
+    }
+    
+    //cellに値を設定するdatasourceメソッド
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        //今回表示を行うCellオブジェクトを取得する
+        let cell = tableView.dequeueReusableCell(withIdentifier: "newsCell", for: indexPath)
+        //ニュースタイトルの設定
+        cell.textLabel?.text = newsList[indexPath.row].title
+        //ニュースの画像を取得
+        if let imageData = try? Data(contentsOf: newsList[indexPath.row].urlToImage) {
+            //正常に取得できた場合はUIImageで画像オブジェクトを生成して、Cellにニュース画像を設定
+            cell.imageView?.image = UIImage(data: imageData)
+        }
+        //設定済みのcellオブジェクトを画面に反映
+        return cell
     }
 }
 
