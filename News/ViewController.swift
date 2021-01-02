@@ -6,8 +6,9 @@
 //
 
 import UIKit
+import SafariServices
 
-class ViewController: UIViewController, UISearchBarDelegate, UITableViewDataSource {
+class ViewController: UIViewController, UISearchBarDelegate, UITableViewDelegate, UITableViewDataSource, SFSafariViewControllerDelegate {
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -20,6 +21,9 @@ class ViewController: UIViewController, UISearchBarDelegate, UITableViewDataSour
         
         //TableViewのdataSource設定
         tableView.dataSource = self
+        
+        //TableViewのdelegateを設定
+        tableView.delegate = self
     }
     //Jsonのarticle内のデータ構造
     struct ArticleJson: Codable {
@@ -118,6 +122,8 @@ class ViewController: UIViewController, UISearchBarDelegate, UITableViewDataSour
         let cell = tableView.dequeueReusableCell(withIdentifier: "newsCell", for: indexPath)
         //ニュースタイトルの設定
         cell.textLabel?.text = newsList[indexPath.row].title
+        //テキストの折り返し
+        cell.textLabel?.numberOfLines = 0
         //ニュースの画像を取得
         if let imageData = try? Data(contentsOf: newsList[indexPath.row].urlToImage) {
             //正常に取得できた場合はUIImageで画像オブジェクトを生成して、Cellにニュース画像を設定
@@ -125,6 +131,29 @@ class ViewController: UIViewController, UISearchBarDelegate, UITableViewDataSour
         }
         //設定済みのcellオブジェクトを画面に反映
         return cell
+    }
+    
+    //セルの高さ上限
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        return 100
+    }
+    
+    //Cellが選択された時に呼び出されるdelegateメソッド
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        //ハイライト解除
+        tableView.deselectRow(at: indexPath, animated: true)
+        //SFSafariViewを開く
+        let safariViewController = SFSafariViewController(url: newsList[indexPath.row].url)
+        //delegateの通知先を自分自身
+        safariViewController.delegate = self
+        //SafariViewが開かれる
+        present(safariViewController, animated: true, completion: nil)
+    }
+    
+    //SafariVIewが閉じられた時に呼ばれるdelegateメソッド
+    func safariViewControllerDidFinish(_ controller: SFSafariViewController) {
+        //SafariVIewを閉じる
+        dismiss(animated: true, completion: nil)
     }
 }
 
